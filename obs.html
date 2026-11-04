@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>キャプチャ表示（高音質・補正オフ版）</title>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        video { max-width: 100%; max-height: 100%; }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay playsinline volume="1"></video>
+    
+    <script>
+        async function startCapture() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioDevice = devices.find(device => 
+                    device.kind === 'audioinput' && device.label.includes('CAP-HDUSB01')
+                );
+
+                // ブラウザ特有の「音をこもらせる補正機能」をすべて false (無効) にします
+                const audioConstraints = {
+                    echoCancellation: false,      // エコーキャンセラーをオフ
+                    noiseSuppression: false,      // ノイズ除去をオフ
+                    autoGainControl: false,       // 自動音量調整をオフ
+                    audioMirroring: false
+                };
+
+                if (audioDevice) {
+                    audioConstraints.deviceId = { exact: audioDevice.deviceId };
+                }
+
+                const constraints = {
+                    video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: audioConstraints
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                document.body.addEventListener('click', () => {
+                    video.muted = false;
+                    video.play().catch(e => console.log(e));
+                }, { once: true });
+
+            } catch (err) {
+                if (err.name === 'NotFoundError' || !navigator.mediaDevices.getUserMedia) {
+                    await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    location.reload();
+                } else {
+                    alert("エラー: " + err.message);
+                }
+            }
+        }
+
+        startCapture();
+    </script>
+</body>
+</html>
